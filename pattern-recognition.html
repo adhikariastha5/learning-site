@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pattern Recognition — The Math Behind Machine Learning</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f0f; color: #e0e0e0; line-height: 1.7; padding: 40px 20px; }
+  .container { max-width: 800px; margin: 0 auto; }
+  h1 { font-size: 2em; color: #bb86fc; margin-bottom: 8px; }
+  h2 { font-size: 1.4em; color: #03dac6; margin-top: 40px; margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 6px; }
+  h3 { font-size: 1.1em; color: #cf6679; margin-top: 24px; margin-bottom: 8px; }
+  p { margin-bottom: 14px; }
+  .subtitle { color: #888; font-size: 0.95em; margin-bottom: 30px; }
+  code { background: #1e1e1e; color: #03dac6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; overflow-x: auto; margin: 12px 0 20px 0; font-size: 0.85em; line-height: 1.6; color: #ccc; }
+  pre code { background: none; padding: 0; }
+  .chapter { background: #1a1a2e; border-left: 4px solid #bb86fc; padding: 20px 24px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+  .chapter-num { color: #bb86fc; font-weight: bold; font-size: 1.2em; display: block; margin-bottom: 4px; }
+  .example { background: #1a2e1a; border-left: 4px solid #03dac6; padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .example-title { color: #03dac6; font-weight: bold; margin-bottom: 8px; }
+  .insight { background: #2e2a1a; border-left: 4px solid #ffb74d; padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .insight-title { color: #ffb74d; font-weight: bold; margin-bottom: 8px; }
+  .formula { background: #2a1a2e; padding: 14px 20px; border-radius: 8px; margin: 12px 0; font-family: 'Courier New', monospace; font-size: 1em; color: #e0b0ff; text-align: center; }
+  .key-concept { display: inline-block; background: #bb86fc22; color: #bb86fc; padding: 2px 10px; border-radius: 12px; font-size: 0.85em; margin: 2px 4px; }
+  .diagram { background: #111; border: 1px solid #333; border-radius: 12px; padding: 24px; margin: 16px 0; text-align: center; font-family: 'Courier New', monospace; color: #03dac6; line-height: 1.4; }
+  .diagram .label { color: #bb86fc; font-size: 0.85em; }
+  .diagram .arrow { color: #666; }
+  .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; justify-content: center; }
+  .flow-step { background: #1a1a2e; border: 1px solid #bb86fc; padding: 8px 16px; border-radius: 20px; color: #bb86fc; font-size: 0.85em; text-align: center; }
+  .flow-arrow { color: #555; font-size: 1.2em; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px 0; }
+  th { background: #1a1a2e; color: #bb86fc; padding: 10px 12px; text-align: left; border: 1px solid #333; }
+  td { padding: 10px 12px; border: 1px solid #333; vertical-align: top; }
+  tr:nth-child(even) { background: #1a1a1a; }
+  .summary-box { background: #1e1e2e; border: 2px solid #bb86fc; border-radius: 12px; padding: 24px; margin-top: 30px; }
+  .summary-box h2 { margin-top: 0; border: none; }
+  ul { margin: 8px 0 16px 24px; }
+  li { margin-bottom: 6px; }
+  .footer { margin-top: 50px; text-align: center; color: #555; font-size: 0.85em; }
+  .neuron-diagram, .bayes-diagram, .cluster-diagram { font-size: 0.9em; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🧮 Pattern Recognition</h1>
+<p class="subtitle">The math behind machine learning — from probability theory to neural networks. A complete foundation distilled from 7 chapters of graduate coursework.</p>
+
+<div class="flow">
+  <span class="flow-step">Linear Algebra</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-step">Probability</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-step">Bayes' Theorem</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-step">Decision Theory</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-step">Nonparametric Methods</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-step">Clustering</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-step">Neural Networks</span>
+</div>
+
+<!-- Chapter 0: Linear Algebra -->
+<div class="chapter">
+  <span class="chapter-num">Chapter 0: Linear Algebra — The Language of ML</span>
+  <p>Every ML algorithm boils down to matrix operations. Before touching any model, you need this vocabulary.</p>
+</div>
+
+<h3>The Core Operations</h3>
+<div class="diagram">
+  <pre style="background: none; border: none; color: #03dac6; text-align: left; display: inline-block;">
+  <span class="label">Vector (data point)</span>        <span class="label">Matrix (dataset / weights)</span>
+
+       ┌   ┐                    ┌             ┐
+  x =  │ 3 │               A = │ 1  2  3     │
+       │ 1 │                    │ 4  5  6     │
+       │ 4 │                    │ 7  8  9     │
+       └   ┘                    └             ┘
+
+  <span class="label">Dot Product (similarity)</span>    <span class="label">Matrix × Vector (transform)</span>
+
+  x·y = x₁y₁ + x₂y₂ + ...     y = Ax  <span class="arrow">→</span>  transforms x into new space
+  </pre>
+</div>
+
+<div class="insight">
+  <div class="insight-title">💡 Why This Matters</div>
+  <ul>
+    <li><strong>Dot product</strong> = cosine similarity (same thing we used in autocomplete!)</li>
+    <li><strong>Matrix multiplication</strong> = every neural network layer is just <code>y = Wx + b</code></li>
+    <li><strong>Inverse matrix</strong> A⁻¹ = solving systems of equations = linear regression in one step</li>
+    <li>When A is invertible: <code>x = A⁻¹b</code> gives the exact solution</li>
+  </ul>
+</div>
+
+<!-- Chapter 1: Introduction -->
+<div class="chapter">
+  <span class="chapter-num">Chapter 1: What Is Pattern Recognition?</span>
+  <p><strong>Definition:</strong> Automatic detection or classification of objects or events from data.</p>
+</div>
+
+<div class="diagram">
+  <pre style="background: none; border: none; color: #03dac6; text-align: left; display: inline-block;">
+  <span class="label">The Pattern Recognition Pipeline</span>
+
+  ┌──────────┐    ┌───────────┐    ┌────────────┐    ┌──────────┐
+  │  Sensor  │───→│  Feature  │───→│ Classifier │───→│ Decision │
+  │  (data)  │    │ Extraction│    │  (model)   │    │ (output) │
+  └──────────┘    └───────────┘    └────────────┘    └──────────┘
+       📷              📊              🧠               ✅
+
+  <span class="label">Example: Medical imaging</span>
+  X-ray image → Extract tumor features → Classify malignant/benign → Diagnosis
+  </pre>
+</div>
+
+<p>Applications everywhere: fingerprint recognition, medical image analysis, speech recognition, satellite imagery, assembly line inspection.</p>
+
+<div class="example">
+  <div class="example-title">📝 Real Example: Predicting Basketball Results</div>
+  <p>Feature: <code>dapg = Home Team avg points - Visiting Team avg points</code></p>
+  <p>If dapg > 0, predict home team wins. Simple! But when dapg is close to 0, this single feature isn't reliable enough. Solution: use <strong>more features</strong> — rebounds, turnovers, free throws. This is why feature engineering matters.</p>
+</div>
+
+<!-- Chapter 2: Probability -->
+<div class="chapter">
+  <span class="chapter-num">Chapter 2: Probability — Dealing with Uncertainty</span>
+  <p>Real data is noisy. Probability gives us the math to make decisions despite uncertainty.</p>
+</div>
+
+<h3>Two Ways to Think About Probability</h3>
+<table>
+  <tr><th>Approach</th><th>How It Works</th><th>Strengths</th><th>Weaknesses</th></tr>
+  <tr>
+    <td><strong>Frequentist</strong></td>
+    <td>Count occurrences / total trials. Test 100 bulbs → 3 defective → P(defective) = 0.03</td>
+    <td>Intuitive, easy to understand</td>
+    <td>Only works for repeatable events. Need lots of data.</td>
+  </tr>
+  <tr>
+    <td><strong>Bayesian</strong></td>
+    <td>Start with a belief (prior), update it with evidence. Your belief evolves.</td>
+    <td>Works with limited data. Can encode domain knowledge.</td>
+    <td>Prior choice is subjective.</td>
+  </tr>
+</table>
+
+<div class="example">
+  <div class="example-title">📝 Skull Classification Example</div>
+  <p>An anthropologist classifies fossil skulls as male/female using circumference measurements. But skulls vary due to hereditary, nutritional, and environmental factors. We model this variability using <strong>probability distributions</strong> — the circumference follows a pattern, but with randomness.</p>
+  <p><code>P(39.5 < x < 40.5) = 0.02</code> → 2% chance the circumference is between 39.5 and 40.5 cm.</p>
+</div>
+
+<!-- Chapter 3: Bayes' Theorem -->
+<div class="chapter">
+  <span class="chapter-num">Chapter 3: Bayes' Theorem — The Heart of Classification</span>
+  <p>Given some evidence, what's the probability of each class? This is THE fundamental question.</p>
+</div>
+
+<div class="formula">P(C|x) = P(C) × P(x|C) / P(x)</div>
+
+<div class="diagram">
+  <pre style="background: none; border: none; color: #03dac6; text-align: left; display: inline-block;">
+  <span class="label">Bayes' Theorem — Decoded</span>
+
+  P(C|x)  = What we want     <span class="arrow">→</span> "Given this data, which class?"
+  P(C)    = Prior probability <span class="arrow">→</span> "How common is this class in general?"
+  P(x|C)  = Likelihood        <span class="arrow">→</span> "If it IS this class, how likely is this data?"
+  P(x)    = Evidence          <span class="arrow">→</span> "How likely is this data overall?"
+  </pre>
+</div>
+
+<div class="example">
+  <div class="example-title">📝 Classic Example: Cold Detection</div>
+  <p><strong>Question:</strong> A person has a fever. What's the probability they have a cold?</p>
+  <pre><code>P(cold) = 0.01          → 1% of people have a cold
+P(fever|cold) = 0.4     → 40% of cold people have fever
+P(fever) = 0.02         → 2% of all people have fever
+
+P(cold|fever) = (0.01 × 0.4) / 0.02 = 0.20 = 20%</code></pre>
+  <p>Before knowing about the fever, there was only a 1% chance of a cold. After observing the fever, it jumped to 20%. <strong>That's the power of Bayes — evidence updates beliefs.</strong></p>
+</div>
+
+<h3>Decision Boundaries</h3>
+<p>Where do you draw the line between "classify as A" vs "classify as B"? At the point where <code>P(A|x) = P(B|x)</code>. Everything to the left of that boundary is class A; everything to the right is class B.</p>
+
+<div class="insight">
+  <div class="insight-title">💡 Unequal Costs of Error</div>
+  <p>Not all mistakes are equal. Missing cancer (false negative) is far worse than a false alarm (false positive). Bayesian decision making lets you assign different <strong>costs to different types of errors</strong> and shift the decision boundary accordingly.</p>
+</div>
+
+<!-- Chapter 4: Nonparametric Methods -->
+<div class="chapter">
+  <span class="chapter-num">Chapter 4: Nonparametric Methods — When You Don't Know the Distribution</span>
+  <p>Bayes assumes you know the distribution shape (normal, Poisson, etc.). In reality, you usually don't. Nonparametric methods make no such assumption.</p>
+</div>
+
+<h3>Histograms: The Simplest Density Estimator</h3>
+<div class="diagram">
+  <pre style="background: none; border: none; color: #03dac6; text-align: left; display: inline-block;">
+  <span class="label">Histogram bin width matters hugely:</span>
+
+  Too few bins (3):          Just right (6):         Too many bins (24):
+  ┌─────────────┐           ┌──┬──┬──┬──┐           ┌┬┬┬┬┬┬┬┬┬┬┬┬┐
+  │   ┌───┐     │           │  │██│  │  │           ││││█│█│││││││ │
+  │   │███│     │           │  │██│██│  │           │││█│█│█│█│││││ │
+  │███│███│███  │           │██│██│██│██│           │█│█│█│█│█│█│█│ │
+  └─────────────┘           └──┴──┴──┴──┘           └┴┴┴┴┴┴┴┴┴┴┴┴┘
+  Oversmoothed              Captures shape           Noisy/overfitting
+  </pre>
+</div>
+<p><strong>Density estimate:</strong> <code>p̂ = count_in_bin / (total_samples × bin_width)</code></p>
+
+<h3>K-Nearest Neighbors (KNN)</h3>
+<p>Don't estimate density at all — just look at your neighbors.</p>
+<div class="diagram">
+  <pre style="background: none; border: none; color: #03dac6; text-align: left; display: inline-block;">
+  <span class="label">KNN with K=3: Who are your 3 closest neighbors?</span>
+
+         ● Cat    ○ Dog    <span style="color: #cf6679;">★ New sample</span>
+
+              ●
+         ○         ●
+              <span style="color: #cf6679;">★</span>
+         ●              ○
+                   ●
+
+  3 nearest neighbors: ● ● ● → All cats → Classify as Cat ✅
+  </pre>
+</div>
+
+<div class="insight">
+  <div class="insight-title">💡 The K choice trade-off</div>
+  <p><strong>Small K</strong> (K=1): Very sensitive to noise. One mislabeled neighbor = wrong answer.</p>
+  <p><strong>Large K</strong> (K=100): Over-smooth. You're averaging too many distant points, losing local patterns.</p>
+  <p>This is the <strong>bias-variance tradeoff</strong> — one of the most important concepts in all of ML.</p>
+</div>
+
+<!-- Chapter 5: Clustering -->
+<div class="chapter">
+  <span class="chapter-num">Chapter 5: Clustering — Finding Structure Without Labels</span>
+  <p>What if nobody told you the classes? Clustering discovers them from the data itself.</p>
+</div>
+
+<h3>Hierarchical Clustering</h3>
+<div class="diagram">
+  <pre style="background: none; border: none; color: #03dac6; text-align: left; display: inline-block;">
+  <span class="label">Dendrogram: A tree of merging clusters</span>
+
+  Level 5 ─────────┬───────────────────────────
+                   │           Animals
+  Level 4 ────┬────┘        ┌────┴────┐
+              │           Dogs        Cats
+  Level 3 ─┬──┘      ┌───┴───┐   ┌───┴───┐
+            │       Large   Small Long  Short
+  Level 2  ...       │       │    Hair   Hair
+  Level 1           St.B   Lab
+  </pre>
+</div>
+<p><strong>Agglomerative</strong> (bottom-up): Start with each point as its own cluster, merge the two most similar. Repeat.</p>
+<p><strong>Divisive</strong> (top-down): Start with one big cluster, split. Repeat.</p>
+
+<div class="example">
+  <div class="example-title">📝 Real Application</div>
+  <p>In 1971, Paykel used cluster analysis to group 165 depressed patients into 4 clusters: "anxious", "hostile", "retarded psychotic", "young depressive". No one labeled these — the algorithm found the groupings from symptom data alone.</p>
+</div>
+
+<h3>The Similarity Question</h3>
+<p>How do you measure "similar"? The choice changes everything:</p>
+<table>
+  <tr><th>Distance Metric</th><th>Formula</th><th>Best For</th></tr>
+  <tr><td><strong>Euclidean</strong></td><td>√(Σ(xᵢ - yᵢ)²)</td><td>When all features have similar scales</td></tr>
+  <tr><td><strong>Manhattan</strong></td><td>Σ|xᵢ - yᵢ|</td><td>When features are independent, grid-like data</td></tr>
+  <tr><td><strong>Cosine</strong></td><td>x·y / (|x|×|y|)</td><td>Text similarity (direction matters, not magnitude)</td></tr>
+</table>
+
+<!-- Chapter 6: Neural Networks -->
+<div class="chapter">
+  <span class="chapter-num">Chapter 6: Artificial Neural Networks — Learning from Data</span>
+  <p>Inspired by biological neurons, but the math is surprisingly simple at its core.</p>
+</div>
+
+<h3>The Single Neuron (McCulloch-Pitts Model, 1943)</h3>
+<div class="diagram">
+  <pre style="background: none; border: none; color: #03dac6; text-align: left; display: inline-block;">
+  <span class="label">A single neuron: weighted sum → threshold → output</span>
+
+   x₁ ──w₁──┐
+             │
+   x₂ ──w₂──┼──→ [ Σ wᵢxᵢ ] ──→ [ > T? ] ──→ output (0 or 1)
+             │
+   x₃ ──w₃──┘
+
+   <span class="label">With bias (modern form):</span>
+
+   output = 1  if  w₀ + w₁x₁ + w₂x₂ + ... + wₘxₘ > 0
+   output = 0  otherwise
+
+   w₀ = -T (threshold becomes a learnable bias weight)
+  </pre>
+</div>
+
+<p>That's it. Every deep learning model, no matter how complex, is built from this: <strong>multiply inputs by weights, sum them, apply a threshold.</strong></p>
+
+<h3>Multi-Layer Networks & Backpropagation</h3>
+<div class="diagram">
+  <pre style="background: none; border: none; color: #03dac6; text-align: left; display: inline-block;">
+  <span class="label">A neural network with hidden layers</span>
+
+  Input Layer      Hidden Layer     Output Layer
+  (features)       (learned)        (prediction)
+
+    x₁ ──────┐  ┌── h₁ ──┐
+              ├──┤        ├──── y₁  (class A?)
+    x₂ ──────┤  ├── h₂ ──┤
+              ├──┤        ├──── y₂  (class B?)
+    x₃ ──────┘  └── h₃ ──┘
+
+  <span class="label">Backpropagation: How it learns</span>
+
+  Forward:  Input → Hidden → Output → Compare with truth → Error
+  Backward: Error → Adjust output weights → Adjust hidden weights
+            (chain rule of calculus propagates error backward)
+  </pre>
+</div>
+
+<div class="insight">
+  <div class="insight-title">💡 Why hidden layers matter</div>
+  <p>A single neuron can only learn <strong>linear boundaries</strong> (straight lines). With a hidden layer, the network can learn <strong>any continuous function</strong> — curves, circles, complex decision boundaries. This is the Universal Approximation Theorem, and it's why deep learning works.</p>
+</div>
+
+<h3>Key Properties of Biological vs Artificial Neural Networks</h3>
+<table>
+  <tr><th>Biological Brain</th><th>Artificial Neural Network</th></tr>
+  <tr><td>Parallel computation (millions of neurons at once)</td><td>GPU parallel processing mimics this</td></tr>
+  <tr><td>Specialized regions for different tasks</td><td>Different layers learn different features</td></tr>
+  <tr><td>Layered architecture, mostly one-direction</td><td>Feedforward: input → hidden → output</td></tr>
+  <tr><td>Robust to damage (graceful degradation)</td><td>Dropout training creates similar robustness</td></tr>
+</table>
+
+<!-- Summary -->
+<div class="summary-box">
+  <h2>🔑 The Complete Picture</h2>
+  <p>
+    <span class="key-concept">Linear Algebra</span>
+    <span class="key-concept">Probability</span>
+    <span class="key-concept">Bayes' Theorem</span>
+    <span class="key-concept">Decision Boundaries</span>
+    <span class="key-concept">Histograms</span>
+    <span class="key-concept">KNN</span>
+    <span class="key-concept">Clustering</span>
+    <span class="key-concept">Dendrograms</span>
+    <span class="key-concept">Neurons</span>
+    <span class="key-concept">Backpropagation</span>
+    <span class="key-concept">Bias-Variance Tradeoff</span>
+    <span class="key-concept">Universal Approximation</span>
+  </p>
+  <h3 style="margin-top: 16px;">How It All Connects</h3>
+  <ul>
+    <li><strong>Linear algebra</strong> gives us the language (vectors, matrices, transformations)</li>
+    <li><strong>Probability</strong> lets us handle uncertainty in data</li>
+    <li><strong>Bayes' theorem</strong> turns probability into classification decisions</li>
+    <li><strong>Nonparametric methods</strong> (KNN, histograms) work when we can't assume a distribution</li>
+    <li><strong>Clustering</strong> finds structure without any labels at all</li>
+    <li><strong>Neural networks</strong> learn the features AND the decision boundaries automatically</li>
+  </ul>
+  <h3 style="margin-top: 16px;">Why This Matters in 2026</h3>
+  <ul>
+    <li>Every LLM is a neural network — understanding layers, weights, and backpropagation helps you understand what GPT actually does</li>
+    <li>Bayes' theorem is everywhere: spam filters, medical diagnosis, A/B testing</li>
+    <li>KNN is still used in production for recommendation systems and anomaly detection</li>
+    <li>Clustering powers customer segmentation, image segmentation, and topic modeling</li>
+    <li>The bias-variance tradeoff applies to every model you'll ever train — from KNN to transformers</li>
+  </ul>
+</div>
+
+<div class="footer">
+  <p>Distilled from Pattern Recognition coursework (Fall 2021, Gachon University) • Generated by Pluto 🪐 • March 2026</p>
+</div>
+
+</div>
+</body>
+</html>
