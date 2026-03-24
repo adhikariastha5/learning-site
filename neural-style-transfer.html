@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neural Style Transfer — How CNNs Learn to Paint</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f0f; color: #e0e0e0; line-height: 1.7; padding: 40px 20px; }
+  .container { max-width: 800px; margin: 0 auto; }
+  h1 { font-size: 2em; color: #bb86fc; margin-bottom: 8px; }
+  h2 { font-size: 1.4em; color: #03dac6; margin-top: 40px; margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 6px; }
+  h3 { font-size: 1.1em; color: #cf6679; margin-top: 24px; margin-bottom: 8px; }
+  p { margin-bottom: 14px; }
+  .subtitle { color: #888; font-size: 0.95em; margin-bottom: 30px; }
+  code { background: #1e1e1e; color: #03dac6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; overflow-x: auto; margin: 12px 0 20px 0; font-size: 0.85em; line-height: 1.6; color: #ccc; }
+  pre code { background: none; padding: 0; }
+  .step { background: #1a1a2e; border-left: 4px solid #bb86fc; padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .step-num { color: #bb86fc; font-weight: bold; font-size: 1.1em; }
+  .example { background: #1a2e1a; border-left: 4px solid #03dac6; padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .example-title { color: #03dac6; font-weight: bold; margin-bottom: 8px; }
+  .insight { background: #2e2a1a; border-left: 4px solid #ffb74d; padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .insight-title { color: #ffb74d; font-weight: bold; margin-bottom: 8px; }
+  .formula { background: #2a1a2e; padding: 14px 20px; border-radius: 8px; margin: 12px 0; font-family: 'Courier New', monospace; font-size: 1em; color: #e0b0ff; text-align: center; }
+  .key-concept { display: inline-block; background: #bb86fc22; color: #bb86fc; padding: 2px 10px; border-radius: 12px; font-size: 0.85em; margin: 2px 4px; }
+  .vs-table { width: 100%; border-collapse: collapse; margin: 12px 0 20px 0; }
+  .vs-table th { background: #1a1a2e; color: #bb86fc; padding: 10px 12px; text-align: left; border: 1px solid #333; }
+  .vs-table td { padding: 10px 12px; border: 1px solid #333; vertical-align: top; }
+  .vs-table tr:nth-child(even) { background: #1a1a1a; }
+  .summary-box { background: #1e1e2e; border: 2px solid #bb86fc; border-radius: 12px; padding: 24px; margin-top: 30px; }
+  .summary-box h2 { margin-top: 0; border: none; }
+  ul { margin: 8px 0 16px 24px; }
+  li { margin-bottom: 6px; }
+  .footer { margin-top: 50px; text-align: center; color: #555; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🎨 Neural Style Transfer</h1>
+<p class="subtitle">How CNNs learn to separate "what's in an image" from "how it looks" — and why that's a profound idea. Based on Gatys et al. (2015), implemented with VGG19.</p>
+
+<h2>1. The Core Idea</h2>
+<p>Take a <strong>content image</strong> (a photo of a city), a <strong>style image</strong> (a Van Gogh painting), and generate an <strong>output image</strong> that has the structure of the photo painted in the style of Van Gogh.</p>
+
+<p>But what does "content" and "style" actually <em>mean</em> mathematically? This is what makes the Gatys paper so elegant.</p>
+
+<div class="insight">
+  <div class="insight-title">💡 The Deep Insight</div>
+  <p>A CNN trained for image classification (like VGG19) doesn't just learn to recognize objects. Its layers learn a <strong>hierarchy of representations</strong>:</p>
+  <ul>
+    <li><strong>Early layers</strong> → edges, textures, colors (low-level features)</li>
+    <li><strong>Middle layers</strong> → patterns, repeated motifs (style features)</li>
+    <li><strong>Deep layers</strong> → objects, structures, spatial arrangement (content features)</li>
+  </ul>
+  <p>Style transfer exploits this: extract <em>content</em> from deep layers and <em>style</em> from early/middle layers, then combine them.</p>
+</div>
+
+<h2>2. Why VGG19?</h2>
+<p>Not all pretrained models work equally well for style transfer:</p>
+<table class="vs-table">
+  <tr><th>Property</th><th>VGG19</th><th>Other models (ResNet, etc.)</th></tr>
+  <tr><td><strong>Depth</strong></td><td>19 layers, learns at many scales</td><td>Skip connections bypass layers</td></tr>
+  <tr><td><strong>Downsampling</strong></td><td>Gradual (max pooling)</td><td>Aggressive — loses spatial info fast</td></tr>
+  <tr><td><strong>Feature maps</strong></td><td>Rich texture info preserved</td><td>Optimized for classification, not texture</td></tr>
+</table>
+
+<p>Key insight: <strong>we don't train VGG19.</strong> We freeze its weights completely. Instead, we optimize the <em>output image itself</em> — the pixels are the variables, not the model parameters. The CNN is just a feature extractor.</p>
+
+<h2>3. The Three Losses</h2>
+<p>The magic is in how we define "looks like the content" and "feels like the style" as loss functions.</p>
+
+<h3>Content Loss</h3>
+<p>Pass both the content image and the generated image through VGG19. At a chosen deep layer, compare their feature maps directly.</p>
+<div class="formula">L_content = ½ × Σ (F_generated - F_content)²</div>
+<p>This is just MSE between feature activations. If the deep-layer features match, the images have similar structure/objects — regardless of surface-level appearance.</p>
+
+<h3>Style Loss (The Clever Part)</h3>
+<p>Style isn't about <em>where</em> features appear — it's about <em>which features tend to co-occur</em>. A Van Gogh painting has swirly textures everywhere, not just in one spot.</p>
+<p>This is captured by the <strong>Gram Matrix</strong>:</p>
+<div class="formula">G = F × F^T</div>
+<p>Multiply a layer's feature map by its own transpose. The result is a matrix of correlations between every pair of feature channels. This strips away spatial information and keeps only the "texture fingerprint."</p>
+
+<div class="example">
+  <div class="example-title">📝 Intuition: What the Gram Matrix captures</div>
+  <p>If feature channel 3 detects "blue" and channel 7 detects "swirly edges," a high value at G[3,7] means "blue swirly edges appear together frequently." That's style.</p>
+  <p>Compare the Gram matrices of the style image and generated image across multiple layers:</p>
+</div>
+
+<div class="formula">L_style = Σ_layers  w_l × || G_generated_l - G_style_l ||²</div>
+
+<h3>Total Loss</h3>
+<div class="formula">L_total = α × L_content + β × L_style</div>
+<p>α and β control the trade-off. High α → output looks more like the photo. High β → output looks more like the painting.</p>
+
+<h2>4. The Optimization Process</h2>
+
+<div class="step">
+  <span class="step-num">Step 1:</span> Start with a random noise image (or a copy of the content image)
+</div>
+<div class="step">
+  <span class="step-num">Step 2:</span> Pass it through frozen VGG19, compute content loss and style loss
+</div>
+<div class="step">
+  <span class="step-num">Step 3:</span> Backpropagate — but update the <em>image pixels</em>, not the model weights
+</div>
+<div class="step">
+  <span class="step-num">Step 4:</span> Repeat for hundreds/thousands of iterations until the image converges
+</div>
+
+<div class="insight">
+  <div class="insight-title">💡 This is backwards from normal training</div>
+  <p>Usually: fixed input, trainable weights. Here: fixed weights, trainable input. The image itself is the thing being optimized. This "inverting a neural network" concept is powerful and shows up in adversarial examples, DeepDream, and feature visualization research.</p>
+</div>
+
+<h2>5. Practical Findings</h2>
+
+<div class="example">
+  <div class="example-title">📝 What actually improved results</div>
+  <ul>
+    <li><strong>Adam optimizer over L-BFGS</strong> — more stable, easier to tune</li>
+    <li><strong>L1 loss over L2</strong> — less prone to blurry artifacts</li>
+    <li><strong>More epochs = better</strong> — early results capture texture but miss global coherence</li>
+  </ul>
+</div>
+
+<h3>Known Limitations</h3>
+<ul>
+  <li>Captures <strong>local, repetitive patterns</strong> but fails at global style features</li>
+  <li><strong>No context awareness</strong> — sky-style might bleed into buildings</li>
+  <li><strong>Resolution issues</strong> — quality degrades at high resolution</li>
+  <li>Slow — each image requires a full optimization loop</li>
+</ul>
+
+<h3>Modern Advancements</h3>
+<table class="vs-table">
+  <tr><th>Limitation</th><th>Solution</th></tr>
+  <tr><td>Single style at a time</td><td><strong>StyleBank</strong> — train multiple styles incrementally, apply any without retraining</td></tr>
+  <tr><td>No context awareness</td><td><strong>Spatial controls</strong> — transfer only between matching regions (sky→sky, ground→ground)</td></tr>
+  <tr><td>Color bleeding</td><td><strong>Color preservation</strong> — transfer patterns without altering the color palette</td></tr>
+  <tr><td>Low resolution</td><td><strong>Hierarchical approach</strong> — coarse-to-fine generation for high-res output</td></tr>
+  <tr><td>Slow optimization</td><td><strong>Feed-forward networks</strong> — train a network once, apply style in real-time</td></tr>
+</table>
+
+<div class="summary-box">
+  <h2>🔑 Key Concepts</h2>
+  <p>
+    <span class="key-concept">CNNs as Feature Extractors</span>
+    <span class="key-concept">Transfer Learning</span>
+    <span class="key-concept">VGG19</span>
+    <span class="key-concept">Gram Matrix</span>
+    <span class="key-concept">Content vs Style</span>
+    <span class="key-concept">Loss Functions</span>
+    <span class="key-concept">Image Optimization</span>
+    <span class="key-concept">Feature Hierarchy</span>
+  </p>
+  <h3 style="margin-top: 16px;">Why This Matters Beyond Art</h3>
+  <ul>
+    <li>The idea of <strong>"inverting" a network</strong> powers adversarial ML, model interpretability, and DeepDream</li>
+    <li><strong>Gram matrices</strong> for texture representation are used in texture synthesis, material recognition, and medical imaging</li>
+    <li><strong>Disentangling content from style</strong> is the foundation of modern image generation (think: ControlNet, style-conditioned diffusion)</li>
+    <li>Understanding what CNN layers "see" makes you better at debugging and designing architectures</li>
+  </ul>
+  <h3 style="margin-top: 16px;">The One-Liner</h3>
+  <p style="color: #e0b0ff; font-style: italic; font-size: 1.05em;">"With very little effort, we were able to invert a model originally trained to discriminate between cats and dogs, and use it to generate countless images in a myriad different styles. Try doing that with a random forest."</p>
+</div>
+
+<div class="footer">
+  <p>Based on Gatys et al. (2015) "A Neural Algorithm of Artistic Style" • Generated by Pluto 🪐 • March 2026</p>
+</div>
+
+</div>
+</body>
+</html>

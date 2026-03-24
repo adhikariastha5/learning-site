@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReLLIE — When Reinforcement Learning Meets Image Enhancement</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f0f; color: #e0e0e0; line-height: 1.7; padding: 40px 20px; }
+  .container { max-width: 800px; margin: 0 auto; }
+  h1 { font-size: 2em; color: #bb86fc; margin-bottom: 8px; }
+  h2 { font-size: 1.4em; color: #03dac6; margin-top: 40px; margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 6px; }
+  h3 { font-size: 1.1em; color: #cf6679; margin-top: 24px; margin-bottom: 8px; }
+  p { margin-bottom: 14px; }
+  .subtitle { color: #888; font-size: 0.95em; margin-bottom: 30px; }
+  code { background: #1e1e1e; color: #03dac6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; overflow-x: auto; margin: 12px 0 20px 0; font-size: 0.85em; line-height: 1.6; color: #ccc; }
+  pre code { background: none; padding: 0; }
+  .step { background: #1a1a2e; border-left: 4px solid #bb86fc; padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .step-num { color: #bb86fc; font-weight: bold; font-size: 1.1em; }
+  .example { background: #1a2e1a; border-left: 4px solid #03dac6; padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .example-title { color: #03dac6; font-weight: bold; margin-bottom: 8px; }
+  .insight { background: #2e2a1a; border-left: 4px solid #ffb74d; padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .insight-title { color: #ffb74d; font-weight: bold; margin-bottom: 8px; }
+  .vs { background: #1a1a2e; border: 1px solid #333; border-radius: 12px; padding: 20px; margin: 16px 0; display: flex; gap: 20px; flex-wrap: wrap; }
+  .vs-col { flex: 1; min-width: 250px; }
+  .vs-col h3 { margin-top: 0; }
+  .formula { background: #2a1a2e; padding: 14px 20px; border-radius: 8px; margin: 12px 0; font-family: 'Courier New', monospace; font-size: 0.95em; color: #e0b0ff; text-align: center; }
+  .key-concept { display: inline-block; background: #bb86fc22; color: #bb86fc; padding: 2px 10px; border-radius: 12px; font-size: 0.85em; margin: 2px 4px; }
+  .summary-box { background: #1e1e2e; border: 2px solid #bb86fc; border-radius: 12px; padding: 24px; margin-top: 30px; }
+  .summary-box h2 { margin-top: 0; border: none; }
+  ul { margin: 8px 0 16px 24px; }
+  li { margin-bottom: 6px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px 0; }
+  th { background: #1a1a2e; color: #bb86fc; padding: 10px 12px; text-align: left; border: 1px solid #333; }
+  td { padding: 10px 12px; border: 1px solid #333; vertical-align: top; }
+  tr:nth-child(even) { background: #1a1a1a; }
+  .footer { margin-top: 50px; text-align: center; color: #555; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🔦 ReLLIE — RL for Low-Light Image Enhancement</h1>
+<p class="subtitle">Why reinforcement learning is surprisingly well-suited for image enhancement — and how we improved the original architecture. Based on Zhang et al. (2021, ACM Multimedia).</p>
+
+<h2>1. The Problem: Low-Light Images Are Hard</h2>
+<p>Enhancing dark images seems simple — just brighten them, right? In practice, it's one of the trickiest problems in computer vision:</p>
+<ul>
+  <li><strong>Different cameras</strong> produce different noise patterns in low light</li>
+  <li><strong>Subjective preferences</strong> — "correct" brightness varies by person and context</li>
+  <li><strong>No ground truth</strong> — for most real-world dark photos, there's no "correct" bright version to train against</li>
+  <li><strong>Noise amplification</strong> — brightening also amplifies sensor noise</li>
+</ul>
+
+<div class="insight">
+  <div class="insight-title">💡 Why Not Just Use a Normal Neural Network?</div>
+  <p>Supervised learning needs paired data: dark image → ground truth bright image. Getting this at scale is nearly impossible for real scenes. You'd need to photograph every scene at two exposure levels perfectly.</p>
+  <p>RL sidesteps this entirely. Instead of "match this target," the agent learns "make decisions that maximize a quality reward." No paired data needed.</p>
+</div>
+
+<h2>2. Framing Enhancement as a Markov Decision Process</h2>
+<p>This is the key insight of ReLLIE — treat image enhancement like a game:</p>
+
+<table>
+  <tr><th>RL Concept</th><th>In Image Enhancement</th></tr>
+  <tr><td><strong>State (s_t)</strong></td><td>The current image. At t=0, it's the raw dark image. At t≥1, it's a partially enhanced image.</td></tr>
+  <tr><td><strong>Action (a_t)</strong></td><td>Select a parameter for a light-enhancement curve at each pixel. Range: [-0.3, 1]</td></tr>
+  <tr><td><strong>Reward (r)</strong></td><td>How good does the enhanced image look? (measured by a combination of losses)</td></tr>
+  <tr><td><strong>Trajectory</strong></td><td>A sequence of enhancement steps: dark → partially bright → fully enhanced</td></tr>
+</table>
+
+<div class="example">
+  <div class="example-title">📝 Think of it like this</div>
+  <p>Imagine you're in a dark room adjusting a dimmer switch. You don't know what "perfect brightness" is — but you can tell if it's too dark, too bright, or if there's weird color shifts. That intuition is the reward function. The RL agent learns to adjust pixel by pixel, step by step.</p>
+</div>
+
+<h2>3. The Architecture</h2>
+
+<div class="step">
+  <span class="step-num">Feature Extraction (EFCN)</span>
+  <p>A fully convolutional network extracts features from the current image state. These features are shared between two networks:</p>
+</div>
+
+<div class="step">
+  <span class="step-num">Policy Network (π)</span>
+  <p>Decides what action to take — outputs a probability distribution over curve parameters for each pixel. The action is sampled from: P(A_t | s_t, θ_π)</p>
+</div>
+
+<div class="step">
+  <span class="step-num">Value Network (V)</span>
+  <p>Estimates the long-term discounted reward from the current state. Used during training to reduce variance (the "critic" in actor-critic).</p>
+</div>
+
+<p>The agent used is <strong>A3C (Asynchronous Advantage Actor-Critic)</strong> — multiple agents learn in parallel, sharing gradients asynchronously. This is faster and more stable than single-agent training.</p>
+
+<h2>4. The Reward Function (The Real Art)</h2>
+<p>Since there's no ground truth image, the reward is designed from perceptual principles:</p>
+
+<div class="formula">r = -(W_spa × L_spatial + W_exp × L_exposure + W_tvA × L_smoothness + W_crl × L_channel_ratio)</div>
+
+<table>
+  <tr><th>Loss Component</th><th>What It Measures</th><th>Why It Matters</th></tr>
+  <tr><td><strong>Spatial Consistency</strong></td><td>Are neighboring pixels changing smoothly?</td><td>Prevents patchy, unnatural brightening</td></tr>
+  <tr><td><strong>Exposure Control</strong></td><td>Is the overall brightness in a good range?</td><td>Avoids over/under-exposure</td></tr>
+  <tr><td><strong>Illumination Smoothness</strong></td><td>Are the enhancement curves smooth?</td><td>Prevents noise amplification artifacts</td></tr>
+  <tr><td><strong>Channel-Ratio Constancy</strong></td><td>Are RGB color ratios preserved?</td><td>Prevents weird color shifts</td></tr>
+</table>
+
+<div class="insight">
+  <div class="insight-title">💡 The beauty: these are all non-reference losses</div>
+  <p>None of them require a "correct" target image. They're all about internal consistency and perceptual quality. This is what makes RL work here — you define "good" as a set of properties, not as a specific target.</p>
+  <p>The weights (W_spa, W_exp, W_tvA, W_crl) are tunable — different users can get different enhancement styles by adjusting preferences. That's the "customized" in "customized low-light image enhancement."</p>
+</div>
+
+<h2>5. Our Improvement</h2>
+<p>We identified two key limitations in the original ReLLIE architecture and proposed solutions:</p>
+
+<div class="vs">
+  <div class="vs-col">
+    <h3 style="color: #cf6679;">Original ReLLIE</h3>
+    <ul>
+      <li>Simple CNN for feature extraction</li>
+      <li>RGB color format only</li>
+      <li>Limited style/color feature capture</li>
+    </ul>
+  </div>
+  <div class="vs-col">
+    <h3 style="color: #03dac6;">Our Improvement</h3>
+    <ul>
+      <li><strong>Attention-guided encoder-decoder</strong> architecture</li>
+      <li><strong>HSV format heat maps</strong> to separate intensity from color</li>
+      <li>Richer feature extraction → higher PSNR</li>
+    </ul>
+  </div>
+</div>
+
+<h3>Why Attention + Encoder-Decoder?</h3>
+<p>A simple CNN treats all pixels equally. But in a dark image, some regions need more enhancement than others (shadows vs. highlights). An attention mechanism lets the network <strong>focus on the regions that matter most</strong>, similar to how you'd naturally look at the darkest parts of a photo first.</p>
+
+<h3>Why HSV Instead of RGB?</h3>
+<p>RGB mixes color and brightness information. HSV (Hue, Saturation, Value) separates them cleanly:</p>
+<ul>
+  <li><strong>H (Hue)</strong> → the actual color (red, blue, green...)</li>
+  <li><strong>S (Saturation)</strong> → how vivid the color is</li>
+  <li><strong>V (Value)</strong> → the brightness/intensity</li>
+</ul>
+<p>For low-light enhancement, you primarily want to modify <strong>V (brightness)</strong> without distorting <strong>H (color)</strong>. Working in HSV makes this natural. Using heat maps of the V channel helps the attention network identify exactly where light intensity needs adjustment.</p>
+
+<h2>6. RL vs Supervised Learning for Image Tasks</h2>
+<table>
+  <tr><th></th><th>Supervised Learning</th><th>Reinforcement Learning</th></tr>
+  <tr><td><strong>Data needed</strong></td><td>Paired (input → target)</td><td>Just inputs + reward signal</td></tr>
+  <tr><td><strong>Enhancement style</strong></td><td>Fixed (whatever the training data looks like)</td><td>Customizable via reward weights</td></tr>
+  <tr><td><strong>Iterative refinement</strong></td><td>Single forward pass</td><td>Multi-step improvement trajectory</td></tr>
+  <tr><td><strong>Training</strong></td><td>Straightforward backprop</td><td>More complex (policy gradients, value estimation)</td></tr>
+  <tr><td><strong>Best for</strong></td><td>Tasks with clear targets</td><td>Tasks with subjective/complex quality criteria</td></tr>
+</table>
+
+<div class="summary-box">
+  <h2>🔑 Key Concepts</h2>
+  <p>
+    <span class="key-concept">Reinforcement Learning</span>
+    <span class="key-concept">Markov Decision Process</span>
+    <span class="key-concept">A3C (Actor-Critic)</span>
+    <span class="key-concept">Non-Reference Loss</span>
+    <span class="key-concept">Low-Light Enhancement</span>
+    <span class="key-concept">Attention Mechanism</span>
+    <span class="key-concept">HSV Color Space</span>
+    <span class="key-concept">Encoder-Decoder</span>
+    <span class="key-concept">Policy Gradient</span>
+  </p>
+  <h3 style="margin-top: 16px;">Why This Matters Beyond Image Enhancement</h3>
+  <ul>
+    <li><strong>RL for non-traditional tasks</strong> — RL isn't just for games and robotics. Any task where "good" is hard to define but easy to evaluate is a candidate.</li>
+    <li><strong>Reward engineering</strong> — designing the right reward function is an art. The non-reference losses here are a masterclass in encoding human preferences mathematically.</li>
+    <li><strong>Attention mechanisms</strong> — the same idea powers transformers, which power LLMs. Understanding spatial attention in vision helps you understand self-attention in language.</li>
+    <li><strong>Color space choice matters</strong> — a simple representation change (RGB → HSV) can dramatically improve model performance. Always question your input representation.</li>
+    <li><strong>The MDP framing trick</strong> — many problems that seem like "just prediction" can be reframed as sequential decision-making for better results.</li>
+  </ul>
+</div>
+
+<div class="footer">
+  <p>Based on Zhang et al. (2021) "ReLLIE: Deep Reinforcement Learning for Customized Low-Light Image Enhancement" (ACM Multimedia) • Improvements by Astha Adhikari & Sevara Mardieva • Generated by Pluto 🪐 • March 2026</p>
+</div>
+
+</div>
+</body>
+</html>
