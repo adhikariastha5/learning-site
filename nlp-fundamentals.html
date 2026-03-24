@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NLP Fundamentals — From Text to Prediction</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f0f; color: #e0e0e0; line-height: 1.7; padding: 40px 20px; }
+  .container { max-width: 800px; margin: 0 auto; }
+  h1 { font-size: 2em; color: #bb86fc; margin-bottom: 8px; }
+  h2 { font-size: 1.4em; color: #03dac6; margin-top: 40px; margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 6px; }
+  h3 { font-size: 1.1em; color: #cf6679; margin-top: 24px; margin-bottom: 8px; }
+  p { margin-bottom: 14px; }
+  .subtitle { color: #888; font-size: 0.95em; margin-bottom: 30px; }
+  code { background: #1e1e1e; color: #03dac6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 16px; overflow-x: auto; margin: 12px 0 20px 0; font-size: 0.85em; line-height: 1.6; color: #ccc; }
+  pre code { background: none; padding: 0; }
+  .step { background: #1a1a2e; border-left: 4px solid #bb86fc; padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .step-num { color: #bb86fc; font-weight: bold; font-size: 1.1em; }
+  .example { background: #1a2e1a; border-left: 4px solid #03dac6; padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .example-title { color: #03dac6; font-weight: bold; margin-bottom: 8px; }
+  .warning { background: #2e1a1a; border-left: 4px solid #cf6679; padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .warning-title { color: #cf6679; font-weight: bold; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px 0; }
+  th { background: #1a1a2e; color: #bb86fc; padding: 10px 12px; text-align: left; border: 1px solid #333; }
+  td { padding: 8px 12px; border: 1px solid #333; }
+  tr:nth-child(even) { background: #1a1a1a; }
+  .formula { background: #2a1a2e; padding: 14px 20px; border-radius: 8px; margin: 12px 0; font-family: 'Courier New', monospace; font-size: 1em; color: #e0b0ff; text-align: center; }
+  .key-concept { display: inline-block; background: #bb86fc22; color: #bb86fc; padding: 2px 10px; border-radius: 12px; font-size: 0.85em; margin: 2px 4px; }
+  .pipeline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; }
+  .pipeline-step { background: #1a1a2e; border: 1px solid #bb86fc; padding: 8px 16px; border-radius: 20px; color: #bb86fc; font-size: 0.9em; }
+  .pipeline-arrow { color: #555; font-size: 1.2em; }
+  .summary-box { background: #1e1e2e; border: 2px solid #bb86fc; border-radius: 12px; padding: 24px; margin-top: 30px; }
+  .summary-box h2 { margin-top: 0; border: none; }
+  ul { margin: 8px 0 16px 24px; }
+  li { margin-bottom: 6px; }
+  .footer { margin-top: 50px; text-align: center; color: #555; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>📝 NLP Fundamentals</h1>
+<p class="subtitle">From raw text to prediction — the complete pipeline before LLMs existed. Built with NLTK, scikit-learn, and Python.</p>
+
+<h2>The Pipeline</h2>
+<p>Every classical NLP task follows this flow:</p>
+<div class="pipeline">
+  <span class="pipeline-step">Raw Text</span>
+  <span class="pipeline-arrow">→</span>
+  <span class="pipeline-step">Preprocessing</span>
+  <span class="pipeline-arrow">→</span>
+  <span class="pipeline-step">Feature Extraction</span>
+  <span class="pipeline-arrow">→</span>
+  <span class="pipeline-step">Encoding</span>
+  <span class="pipeline-arrow">→</span>
+  <span class="pipeline-step">Model</span>
+  <span class="pipeline-arrow">→</span>
+  <span class="pipeline-step">Prediction</span>
+</div>
+
+<h2>1. Text Preprocessing</h2>
+<p>Before any ML model can understand text, we need to clean and structure it. The first step is <strong>tokenization</strong> — splitting text into meaningful units.</p>
+
+<h3>Tokenization: Why It's Not Trivial</h3>
+<p>Consider: <code>"This is Paradox's text, isn't it?"</code></p>
+
+<div class="example">
+  <div class="example-title">📝 Comparing Tokenizers</div>
+
+<pre><code>import nltk
+
+text = "This is Paradox's text, isn't it?"
+
+# Whitespace tokenizer — just splits on spaces
+nltk.tokenize.WhitespaceTokenizer().tokenize(text)
+# → ['This', 'is', "Paradox's", 'text,', "isn't", 'it?']</code></pre>
+
+  <div class="warning">
+    <div class="warning-title">⚠️ Problem</div>
+    "it" and "it?" become different tokens with the same meaning.
+  </div>
+
+<pre><code># Punctuation tokenizer — splits on punctuation too
+nltk.tokenize.WordPunctTokenizer().tokenize(text)
+# → ['This', 'is', 'Paradox', "'", 's', 'text', ',', 'isn', "'", 't', 'it', '?']</code></pre>
+
+  <div class="warning">
+    <div class="warning-title">⚠️ Problem</div>
+    "s", "isn", "t" are not meaningful tokens.
+  </div>
+
+<pre><code># Treebank tokenizer — uses linguistic rules
+nltk.tokenize.TreebankWordTokenizer().tokenize(text)
+# → ['This', 'is', 'Paradox', "'s", 'text', ',', 'is', "n't", 'it', '?']</code></pre>
+
+  <p>✅ Now "'s" and "n't" are linguistically meaningful! This is the standard for English NLP.</p>
+</div>
+
+<h3>POS Tagging (Part of Speech)</h3>
+<p>Once tokenized, we can tag each word with its grammatical role:</p>
+<pre><code>text = "We are at Mpercept Technology"
+tokens = nltk.word_tokenize(text)
+tagged = nltk.pos_tag(tokens)
+# → [('We', 'PRP'), ('are', 'VBP'), ('at', 'IN'),
+#    ('Mpercept', 'NNP'), ('Technology', 'NNP')]
+
+# PRP = pronoun, VBP = verb, IN = preposition, NNP = proper noun</code></pre>
+
+<h2>2. Feature Extraction</h2>
+<p>ML models need numbers, not words. Feature extraction converts text into numerical vectors.</p>
+
+<h3>Count Vectorizer (Bag of Words)</h3>
+<p>The simplest approach: count how often each word appears in each document.</p>
+
+<pre><code>from sklearn.feature_extraction.text import CountVectorizer
+
+texts = [
+    "He is having a great time at the park time",
+    "She unlike most women is a big player on the park grass",
+    "She can't be going"
+]
+
+count_vec = CountVectorizer(stop_words="english")
+bag_of_words = count_vec.fit_transform(texts)
+
+print(count_vec.get_feature_names_out())
+# → ['big', 'going', 'grass', 'great', 'park', 'player',
+#    'time', 'unlike', 'women']</code></pre>
+
+<p>Each document becomes a vector of word counts. Notice: stopwords like "is", "a", "the" are automatically removed.</p>
+
+<h3>N-Grams: Capturing Word Sequences</h3>
+<p>Single words lose context. N-grams capture sequences:</p>
+
+<div class="example">
+  <div class="example-title">📝 N-Gram Examples</div>
+  <table>
+    <tr><th>N</th><th>Name</th><th>Example from "the park time"</th></tr>
+    <tr><td>1</td><td>Unigram</td><td><code>the</code>, <code>park</code>, <code>time</code></td></tr>
+    <tr><td>2</td><td>Bigram</td><td><code>the park</code>, <code>park time</code></td></tr>
+    <tr><td>3</td><td>Trigram</td><td><code>the park time</code></td></tr>
+  </table>
+</div>
+
+<pre><code># Using bigrams (1-2 word combinations)
+count_vec = CountVectorizer(stop_words="english", ngram_range=(1, 2))
+count_vec.fit(texts)
+print(count_vec.get_feature_names_out())
+# → ['big', 'big player', 'going', 'grass', 'great',
+#    'great time', 'park', 'park grass', 'park time', ...]</code></pre>
+
+<h3>TF-IDF: Smarter Than Raw Counts</h3>
+<p>Problem with raw counts: common words dominate. <strong>TF-IDF</strong> solves this by weighting words that are important to a specific document but rare across all documents.</p>
+
+<div class="formula">
+  TF-IDF = Term Frequency × Inverse Document Frequency
+</div>
+
+<p><strong>TF</strong> = how often a word appears in this document<br>
+<strong>IDF</strong> = log(total documents / documents containing the word)</p>
+
+<p>Words that appear everywhere (like "the") get low IDF scores. Words unique to a document get high scores.</p>
+
+<h2>3. One Hot Encoding</h2>
+<p>For categorical data (not just text), one hot encoding converts labels to binary vectors.</p>
+
+<div class="example">
+  <div class="example-title">📝 Manual One Hot Encoding</div>
+<pre><code>data = 'hello world'
+alphabet = 'abcdefghijklmnopqrstuvwxyz '
+
+# Map characters to integers
+char_to_int = {c: i for i, c in enumerate(alphabet)}
+# 'h' → 7, 'e' → 4, 'l' → 11, ...
+
+# Integer encode
+integer_encoded = [char_to_int[char] for char in data]
+# → [7, 4, 11, 11, 14, 26, 22, 14, 17, 11, 3]
+
+# One hot encode
+onehot_encoded = []
+for value in integer_encoded:
+    letter = [0] * len(alphabet)  # 27 zeros
+    letter[value] = 1             # set one position to 1
+    onehot_encoded.append(letter)
+
+# 'h' → [0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+# 'e' → [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]</code></pre>
+</div>
+
+<p>With scikit-learn, this becomes one line:</p>
+<pre><code>from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+
+label_encoder = LabelEncoder()
+integer_encoded = label_encoder.fit_transform(list(data))
+onehot_encoder = OneHotEncoder(sparse=False)
+onehot_encoded = onehot_encoder.fit_transform(integer_encoded.reshape(-1, 1))</code></pre>
+
+<h2>4. Visualization</h2>
+<p>Before modelling, always visualize your data:</p>
+
+<pre><code>from wordcloud import WordCloud
+from nltk.corpus import reuters
+
+wc = WordCloud().generate(' '.join(reuters.words()))
+plt.imshow(wc, interpolation='bilinear')
+plt.axis("off")
+plt.show()</code></pre>
+
+<p>Word clouds give a quick sense of what's in your corpus. Bigger words = higher frequency.</p>
+
+<h2>5. Putting It All Together: Sentiment Analysis</h2>
+<p>The final notebook builds a complete pipeline — predicting whether IMDB reviews are positive or negative.</p>
+
+<div class="step">
+  <span class="step-num">Step 1: Load Data</span>
+  <p>IMDB labelled reviews — each line is a review + sentiment label (0 or 1)</p>
+</div>
+
+<div class="step">
+  <span class="step-num">Step 2: Clean Text</span>
+<pre><code>def clean(text):
+    text = re.sub(r'[0-9]+', '', text)       # remove numbers
+    text = re.sub(r'[^\w]', ' ', text)        # remove punctuation
+    tokens = nltk.word_tokenize(text)          # tokenize
+    tokens = [w for w in tokens if w not in stop_words]  # remove stopwords
+    tokens = [lem.lemmatize(w) for w in tokens]  # lemmatize
+    return ' '.join(tokens)</code></pre>
+</div>
+
+<div class="step">
+  <span class="step-num">Step 3: Vectorize</span>
+  <p>Convert cleaned text to numerical features using CountVectorizer or TF-IDF</p>
+</div>
+
+<div class="step">
+  <span class="step-num">Step 4: Train Model</span>
+  <p>Feed vectors into a <strong>Naive Bayes classifier</strong></p>
+</div>
+
+<div class="step">
+  <span class="step-num">Step 5: Evaluate</span>
+<pre><code>from sklearn.metrics import accuracy_score
+predictions = model.predict(X_test)
+print(f"Accuracy: {accuracy_score(y_test, predictions)}")</code></pre>
+</div>
+
+<div class="summary-box">
+  <h2>🔑 Key Concepts Covered</h2>
+  <p>
+    <span class="key-concept">Tokenization</span>
+    <span class="key-concept">POS Tagging</span>
+    <span class="key-concept">Stopword Removal</span>
+    <span class="key-concept">Stemming & Lemmatization</span>
+    <span class="key-concept">Count Vectorizer</span>
+    <span class="key-concept">TF-IDF</span>
+    <span class="key-concept">N-Grams</span>
+    <span class="key-concept">One Hot Encoding</span>
+    <span class="key-concept">Bag of Words</span>
+    <span class="key-concept">Naive Bayes</span>
+    <span class="key-concept">Sentiment Analysis</span>
+    <span class="key-concept">Word Cloud</span>
+  </p>
+  <h3 style="margin-top: 16px;">Why This Still Matters in 2026</h3>
+  <ul>
+    <li><strong>Tokenization</strong> is still step one — even GPT uses it (BPE tokenizer)</li>
+    <li><strong>TF-IDF</strong> powers search engines and is used alongside embeddings in hybrid search</li>
+    <li><strong>Preprocessing pipelines</strong> are critical for data cleaning before fine-tuning LLMs</li>
+    <li><strong>Feature engineering</strong> concepts apply to every ML domain, not just NLP</li>
+    <li>Understanding these fundamentals makes you better at prompt engineering and debugging LLM outputs</li>
+  </ul>
+  <h3 style="margin-top: 16px;">The Full Pipeline</h3>
+  <div class="formula" style="text-align: left; font-size: 0.85em;">
+    Raw Text → Tokenize → Remove Stopwords → Lemmatize → Vectorize (Count/TF-IDF) → Train Model → Predict
+  </div>
+</div>
+
+<div class="footer">
+  <p>Generated from ~/Documents/Hands-On-Natural-Language-Processing- by Pluto 🪐 • March 2026</p>
+</div>
+
+</div>
+</body>
+</html>
