@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Architect — How Modern AI Agent Systems Work</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e17;--bg2:#111827;--bg3:#1a2236;--border:#2a3654;
+  --text:#e2e8f0;--text2:#94a3b8;--accent:#6366f1;
+  --green:#22c55e;--red:#ef4444;--orange:#f59e0b;--blue:#3b82f6;
+  --purple:#a855f7;--cyan:#06b6d4;--pink:#ec4899;
+  --glow-green:0 0 20px rgba(34,197,94,.4);
+  --glow-blue:0 0 20px rgba(59,130,246,.4);
+  --glow-orange:0 0 20px rgba(245,158,11,.4);
+  --glow-purple:0 0 20px rgba(168,85,247,.4);
+  --glow-red:0 0 20px rgba(239,68,68,.4);
+  --glow-cyan:0 0 20px rgba(6,182,212,.4);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+
+/* HEADER */
+.header{padding:16px 24px 12px;text-align:center;background:linear-gradient(180deg,rgba(99,102,241,.08),transparent);border-bottom:1px solid var(--border);flex-shrink:0}
+.header h1{font-size:1.5rem;font-weight:700;background:linear-gradient(135deg,#6366f1,#a855f7,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-.02em}
+.header p{font-size:.75rem;color:var(--text2);margin-top:2px}
+
+/* TIMELINE */
+.timeline{display:flex;align-items:center;justify-content:center;gap:0;padding:10px 24px;flex-shrink:0;background:var(--bg2);border-bottom:1px solid var(--border)}
+.timeline-step{display:flex;align-items:center;gap:0}
+.step-dot{width:28px;height:28px;border-radius:50%;background:var(--bg3);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:600;color:var(--text2);transition:all .5s;position:relative}
+.step-dot.active{border-color:var(--accent);color:#fff;background:var(--accent);box-shadow:0 0 16px rgba(99,102,241,.5)}
+.step-dot.done{border-color:var(--green);color:#fff;background:var(--green);box-shadow:0 0 12px rgba(34,197,94,.3)}
+.step-line{width:32px;height:2px;background:var(--border);transition:background .5s}
+.step-line.done{background:var(--green)}
+.step-label{position:absolute;top:32px;font-size:.6rem;white-space:nowrap;color:var(--text2)}
+.step-dot.active .step-label,.step-dot.done .step-label{color:var(--text)}
+
+/* INPUT BAR */
+.input-bar{display:flex;align-items:center;gap:8px;padding:10px 24px;flex-shrink:0;background:var(--bg)}
+.input-bar input{flex:1;padding:10px 16px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:.85rem;outline:none;transition:border-color .2s}
+.input-bar input:focus{border-color:var(--accent)}
+.input-bar input::placeholder{color:var(--text2)}
+.btn{padding:8px 16px;border-radius:10px;border:none;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#5558e6;box-shadow:0 0 16px rgba(99,102,241,.4)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-preset{background:var(--bg3);color:var(--text2);border:1px solid var(--border);font-size:.7rem;padding:6px 12px}
+.btn-preset:hover{border-color:var(--accent);color:var(--text)}
+
+/* MAIN LAYOUT */
+.main{display:flex;flex:1;overflow:hidden}
+.canvas-wrap{flex:1;position:relative;min-width:0}
+.canvas-wrap canvas{display:block;width:100%;height:100%}
+
+/* SIDEBAR */
+.sidebar{width:280px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.panel{border-bottom:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column}
+.panel.expanded{flex:1}
+.panel-head{padding:8px 12px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;flex-shrink:0}
+.panel-head .icon{font-size:.85rem}
+.panel-body{padding:4px 12px 8px;overflow-y:auto;font-size:.75rem;color:var(--text2);line-height:1.5;flex:1;min-height:0}
+.panel-body::-webkit-scrollbar{width:4px}
+.panel-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* Context viewer */
+.context-item{background:var(--bg3);border-radius:6px;padding:6px 8px;margin-bottom:4px;border-left:3px solid var(--blue);animation:fadeSlideIn .3s ease}
+.context-label{font-weight:600;color:var(--blue);font-size:.65rem;text-transform:uppercase;margin-bottom:2px}
+
+/* Skill cards */
+.skill-card{background:var(--bg3);border-radius:6px;padding:6px 8px;margin-bottom:4px;border-left:3px solid var(--orange);animation:fadeSlideIn .3s ease}
+.skill-name{font-weight:600;color:var(--orange);font-size:.7rem}
+.skill-desc{font-size:.65rem;color:var(--text2)}
+
+/* File items */
+.file-item{display:flex;align-items:center;gap:6px;padding:3px 0;animation:fadeSlideIn .3s ease}
+.file-icon{color:var(--cyan);font-size:.8rem}
+.file-name{color:var(--cyan);font-weight:500;font-size:.7rem}
+.file-status{font-size:.6rem;margin-left:auto;color:var(--green)}
+
+/* Memory items */
+.memory-item{background:var(--bg3);border-radius:6px;padding:6px 8px;margin-bottom:4px;border-left:3px solid var(--purple);animation:fadeSlideIn .3s ease}
+.memory-item .mem-label{font-weight:600;color:var(--purple);font-size:.65rem;text-transform:uppercase}
+
+/* LEGEND */
+.legend{display:flex;align-items:center;justify-content:center;gap:16px;padding:8px 24px;background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:.65rem;color:var(--text2);position:relative}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+.legend-item .info-icon{cursor:help;font-size:.7rem;opacity:.6}
+.legend-item .info-icon:hover{opacity:1}
+
+/* TOOLTIP */
+.tooltip{position:fixed;max-width:260px;background:#1e293b;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.72rem;color:var(--text);line-height:1.5;box-shadow:0 8px 32px rgba(0,0,0,.5);pointer-events:none;z-index:999;opacity:0;transition:opacity .2s}
+.tooltip.visible{opacity:1}
+.tooltip h4{font-size:.75rem;margin-bottom:4px}
+
+/* SUMMARY OVERLAY */
+.summary-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,14,23,.95);border:1px solid var(--green);border-radius:16px;padding:28px 36px;text-align:center;opacity:0;pointer-events:none;transition:all .5s;box-shadow:0 0 40px rgba(34,197,94,.2)}
+.summary-overlay.visible{opacity:1;pointer-events:auto}
+.summary-overlay h2{color:var(--green);font-size:1.1rem;margin-bottom:6px}
+.summary-overlay p{color:var(--text2);font-size:.8rem;line-height:1.6}
+.summary-overlay .btn{margin-top:14px}
+
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:900px){.sidebar{width:220px}}
+@media(max-width:700px){.sidebar{display:none}.legend{gap:8px}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚡ Agent Architect</h1>
+  <p>How Modern AI Agent Systems Work — Patterns from DeerFlow (ByteDance), Oh-My-ClaudeCode, Ruflo &amp; last30days-skill</p>
+</div>
+
+<div class="timeline" id="timeline"></div>
+
+<div class="input-bar">
+  <input type="text" id="taskInput" placeholder="Describe a task for the agent system..." />
+  <button class="btn btn-primary" id="runBtn" onclick="startTask()">Run ▶</button>
+  <button class="btn btn-preset" onclick="loadPreset('api')">Build a REST API</button>
+  <button class="btn btn-preset" onclick="loadPreset('debug')">Debug a Crash</button>
+  <button class="btn btn-preset" onclick="loadPreset('research')">Research a Topic</button>
+</div>
+
+<div class="main">
+  <div class="canvas-wrap">
+    <canvas id="canvas"></canvas>
+    <div class="summary-overlay" id="summary"></div>
+  </div>
+  <div class="sidebar">
+    <div class="panel expanded">
+      <div class="panel-head"><span class="icon">🔭</span> Context Viewer</div>
+      <div class="panel-body" id="contextPanel"><span style="opacity:.5">Select an agent to view its context scope…</span></div>
+    </div>
+    <div class="panel expanded">
+      <div class="panel-head"><span class="icon">🧩</span> Skills</div>
+      <div class="panel-body" id="skillsPanel"><span style="opacity:.5">Skills load on demand…</span></div>
+    </div>
+    <div class="panel expanded">
+      <div class="panel-head"><span class="icon">📁</span> Filesystem</div>
+      <div class="panel-body" id="filesPanel"><span style="opacity:.5">Files appear as agents produce output…</span></div>
+    </div>
+    <div class="panel expanded">
+      <div class="panel-head"><span class="icon">🧠</span> Memory</div>
+      <div class="panel-body" id="memoryPanel"><span style="opacity:.5">Learnings accumulate here…</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="legend" id="legend"></div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ─── CONFIG & STATE ───────────────────────────────────────
+const C = document.getElementById('canvas');
+const ctx = C.getContext('2d');
+let W, H, dpr;
+let animFrame;
+let running = false;
+let currentStep = -1;
+let nodes = [];
+let edges = [];
+let particles = [];
+let time = 0;
+let hoveredNode = null;
+
+const STEPS = ['Plan','Decompose','Load Skills','Execute','Verify','Complete'];
+
+const PATTERNS = [
+  {name:'Skills as Markdown',color:'#f59e0b',desc:'Skills are stored as markdown files and loaded on-demand — agents only get the skills they need, reducing context bloat and enabling modular capability injection.'},
+  {name:'Multi-Agent Orchestration',color:'#6366f1',desc:'Complex tasks are decomposed and assigned to specialized agents. Each agent has a focused role (planner, coder, reviewer) enabling parallel work and expertise division.'},
+  {name:'Context Scoping',color:'#3b82f6',desc:'Each agent receives only the context it needs — not the full conversation. This reduces token usage, prevents confusion, and enforces separation of concerns.'},
+  {name:'Verify → Fix Loop',color:'#22c55e',desc:'After execution, a verifier agent checks the work against acceptance criteria. If issues are found, the work routes back to the executor for fixes — creating a self-healing pipeline.'},
+  {name:'Memory / Persistence',color:'#a855f7',desc:'Agents write learnings and decisions to persistent memory (files, databases). This enables continuity across sessions and helps the system improve over time.'},
+  {name:'Filesystem Coordination',color:'#06b6d4',desc:'Agents coordinate through shared files rather than message passing alone. One agent writes a spec file; another reads it. This creates durable, inspectable artifacts.'}
+];
+
+// ─── PRESETS ──────────────────────────────────────────────
+const PRESETS = {
+  api: {
+    task: 'Build a REST API with user authentication, CRUD endpoints, and database integration',
+    agents: [
+      {role:'Planner',color:'#6366f1',icon:'📋'},
+      {role:'Architect',color:'#3b82f6',icon:'🏗️'},
+      {role:'Coder',color:'#f59e0b',icon:'💻'},
+      {role:'Reviewer',color:'#a855f7',icon:'🔍'},
+      {role:'Verifier',color:'#22c55e',icon:'✅'}
+    ],
+    subtasks:['Design API schema & routes','Set up auth middleware (JWT)','Implement CRUD endpoints','Write integration tests'],
+    skills:[{name:'rest-api-patterns.md',desc:'RESTful design conventions, status codes, pagination'},{name:'auth-jwt.md',desc:'JWT token flow, refresh tokens, middleware setup'}],
+    files:['api/schema.json','api/routes.ts','api/auth/middleware.ts','api/controllers/user.ts','tests/api.test.ts'],
+    context:{
+      'Planner':['Task: Build REST API','Requirements: auth, CRUD, database','Constraints: TypeScript, PostgreSQL'],
+      'Architect':['API Schema','Route definitions','Database ERD','Auth flow diagram'],
+      'Coder':['Architecture spec','Skill: rest-api-patterns.md','Skill: auth-jwt.md','File: schema.json'],
+      'Reviewer':['All source files','Test results','API spec compliance','Security checklist'],
+      'Verifier':['Test output logs','Coverage report','Linting results','Type check status']
+    },
+    memory:['REST pattern: resource-based routes with plural nouns','Auth: always hash passwords with bcrypt, never store plaintext','Testing: integration tests catch more bugs than unit tests for APIs','DB: use migrations, never modify schema directly'],
+    verifyFail: true
+  },
+  debug: {
+    task: 'Debug a production crash: TypeError: Cannot read properties of undefined (reading "map")',
+    agents: [
+      {role:'Analyzer',color:'#ef4444',icon:'🔬'},
+      {role:'Researcher',color:'#3b82f6',icon:'📚'},
+      {role:'Fixer',color:'#f59e0b',icon:'🔧'},
+      {role:'Verifier',color:'#22c55e',icon:'✅'}
+    ],
+    subtasks:['Analyze stack trace & error context','Research similar issues & patterns','Apply fix with null-safety guards','Verify fix resolves the crash'],
+    skills:[{name:'error-analysis.md',desc:'Stack trace parsing, error taxonomy, common JS pitfalls'},{name:'debugging-strategies.md',desc:'Binary search debugging, git bisect, log injection'}],
+    files:['debug/stack-trace.txt','debug/analysis.md','src/components/List.tsx','tests/list.test.tsx'],
+    context:{
+      'Analyzer':['Stack trace','Error message','Recent git commits','Runtime environment info'],
+      'Researcher':['Error pattern: undefined.map','Similar issues in codebase','NPM advisory database','Stack Overflow matches'],
+      'Fixer':['Root cause analysis','Affected file: List.tsx','Skill: error-analysis.md','Proposed fix strategy'],
+      'Verifier':['Original error reproduction','Fix diff','Test suite results','Edge case coverage']
+    },
+    memory:['Common cause: async data not loaded before render — add optional chaining','Always add loading states for async data fetches','Null checks at component boundaries prevent cascading failures','Git bisect is fastest for regression bugs'],
+    verifyFail: false
+  },
+  research: {
+    task: 'Research the current state of AI agent frameworks and compile a comprehensive analysis',
+    agents: [
+      {role:'Planner',color:'#6366f1',icon:'📋'},
+      {role:'Web Researcher',color:'#3b82f6',icon:'🌐'},
+      {role:'Paper Researcher',color:'#06b6d4',icon:'📄'},
+      {role:'Code Researcher',color:'#f59e0b',icon:'💻'},
+      {role:'Synthesizer',color:'#a855f7',icon:'✨'}
+    ],
+    subtasks:['Define research scope & questions','Search web for recent articles & posts','Review academic papers & benchmarks','Analyze top GitHub repos & patterns'],
+    skills:[{name:'web-research.md',desc:'Search strategies, source evaluation, fact-checking'},{name:'synthesis.md',desc:'Cross-referencing, conflict resolution, narrative construction'}],
+    files:['research/scope.md','research/web-findings.md','research/papers.md','research/repos.md','research/final-report.md'],
+    context:{
+      'Planner':['Task: Research AI agent frameworks','Deliverable: comprehensive analysis','Timeline: thorough coverage'],
+      'Web Researcher':['Research questions','Search queries','Source credibility criteria','Web search results'],
+      'Paper Researcher':['Research questions','ArXiv query results','Benchmark comparisons','Citation analysis'],
+      'Code Researcher':['Research questions','GitHub trending repos','Code pattern analysis','Star/fork metrics'],
+      'Synthesizer':['All research findings','Cross-reference matrix','Conflict notes','Outline template']
+    },
+    memory:['Multi-source research produces more balanced conclusions','Always cross-reference claims across at least 2 sources','GitHub stars correlate weakly with code quality — check issues/PRs','Academic papers lag industry practice by 6-12 months in fast-moving fields'],
+    verifyFail: false
+  }
+};
+
+// ─── TIMELINE SETUP ───────────────────────────────────────
+function buildTimeline(){
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+  STEPS.forEach((s,i)=>{
+    if(i>0){const ln=document.createElement('div');ln.className='step-line';ln.id='step-line-'+i;tl.appendChild(ln)}
+    const d=document.createElement('div');d.className='step-dot';d.id='step-'+i;
+    d.innerHTML=`${i+1}<span class="step-label">${s}</span>`;
+    tl.appendChild(d);
+  });
+}
+
+function setStep(n){
+  currentStep=n;
+  STEPS.forEach((_,i)=>{
+    const dot=document.getElementById('step-'+i);
+    const line=document.getElementById('step-line-'+i);
+    dot.classList.remove('active','done');
+    if(i<n) dot.classList.add('done');
+    else if(i===n) dot.classList.add('active');
+    if(line){line.classList.remove('done');if(i<=n) line.classList.add('done')}
+  });
+}
+
+// ─── LEGEND ───────────────────────────────────────────────
+function buildLegend(){
+  const lg=document.getElementById('legend');
+  lg.innerHTML='';
+  PATTERNS.forEach(p=>{
+    const item=document.createElement('div');
+    item.className='legend-item';
+    item.innerHTML=`<span class="legend-dot" style="background:${p.color}"></span>${p.name}<span class="info-icon">ℹ️</span>`;
+    const icon=item.querySelector('.info-icon');
+    icon.addEventListener('mouseenter',e=>showTooltip(e,`<h4>${p.name}</h4>${p.desc}`));
+    icon.addEventListener('mouseleave',hideTooltip);
+    lg.appendChild(item);
+  });
+}
+
+// ─── TOOLTIP ──────────────────────────────────────────────
+const tooltip=document.getElementById('tooltip');
+function showTooltip(e,html){
+  tooltip.innerHTML=html;
+  tooltip.classList.add('visible');
+  const r=tooltip.getBoundingClientRect();
+  let x=e.clientX+12,y=e.clientY-r.height-8;
+  if(x+r.width>window.innerWidth) x=e.clientX-r.width-12;
+  if(y<0) y=e.clientY+16;
+  tooltip.style.left=x+'px';tooltip.style.top=y+'px';
+}
+function hideTooltip(){tooltip.classList.remove('visible')}
+
+// ─── CANVAS RESIZE ────────────────────────────────────────
+function resize(){
+  const wrap=C.parentElement;
+  dpr=window.devicePixelRatio||1;
+  W=wrap.clientWidth;H=wrap.clientHeight;
+  C.width=W*dpr;C.height=H*dpr;
+  C.style.width=W+'px';C.style.height=H+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize',resize);
+
+// ─── NODE & EDGE CLASSES ──────────────────────────────────
+class AgentNode{
+  constructor(role,color,icon,x,y){
+    this.role=role;this.color=color;this.icon=icon;
+    this.tx=x;this.ty=y;this.x=x;this.y=y-30;
+    this.r=32;this.opacity=0;this.glow=0;this.active=false;
+    this.pulsePhase=Math.random()*Math.PI*2;
+    this.spawned=false;
+  }
+  spawn(){this.spawned=true}
+  activate(){this.active=true;this.glow=1}
+  deactivate(){this.active=false}
+  update(dt){
+    this.x+=(this.tx-this.x)*.08;
+    this.y+=(this.ty-this.y)*.08;
+    if(this.spawned&&this.opacity<1) this.opacity=Math.min(1,this.opacity+dt*3);
+    if(this.active){this.glow=.5+.5*Math.sin(time*4+this.pulsePhase)}
+    else{this.glow*=.95}
+    this.pulsePhase+=dt;
+  }
+  draw(){
+    if(this.opacity<=0) return;
+    ctx.save();ctx.globalAlpha=this.opacity;
+    // glow
+    if(this.glow>.01){
+      ctx.shadowColor=this.color;ctx.shadowBlur=20+this.glow*20;
+      ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+      ctx.fillStyle=this.color+'22';ctx.fill();
+      ctx.shadowBlur=0;
+    }
+    // body
+    ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+    const g=ctx.createRadialGradient(this.x-8,this.y-8,4,this.x,this.y,this.r);
+    g.addColorStop(0,this.color+'44');g.addColorStop(1,this.color+'11');
+    ctx.fillStyle=g;ctx.fill();
+    ctx.strokeStyle=this.color;ctx.lineWidth=2;ctx.stroke();
+    // icon
+    ctx.font='16px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#fff';ctx.fillText(this.icon,this.x,this.y-2);
+    // label
+    ctx.font='bold 10px sans-serif';ctx.fillStyle=this.color;
+    ctx.fillText(this.role,this.x,this.y+this.r+14);
+    ctx.restore();
+  }
+  hitTest(mx,my){return Math.hypot(mx-this.x,my-this.y)<this.r+8}
+}
+
+class Edge{
+  constructor(from,to,color){this.from=from;this.to=to;this.color=color||'#334155';this.opacity=0;this.active=false}
+  show(){this.opacity=1}
+  draw(){
+    if(this.opacity<=0||!this.from.spawned||!this.to.spawned) return;
+    ctx.save();
+    ctx.globalAlpha=this.opacity*Math.min(this.from.opacity,this.to.opacity)*.6;
+    ctx.beginPath();
+    ctx.moveTo(this.from.x,this.from.y);ctx.lineTo(this.to.x,this.to.y);
+    ctx.strokeStyle=this.active?this.color:'#334155';
+    ctx.lineWidth=this.active?2:1;
+    if(this.active){ctx.shadowColor=this.color;ctx.shadowBlur=8}
+    ctx.stroke();ctx.restore();
+  }
+}
+
+class Particle{
+  constructor(from,to,color,speed){
+    this.from=from;this.to=to;this.color=color;
+    this.t=0;this.speed=speed||1;this.alive=true;
+    this.size=3+Math.random()*2;
+    this.trail=[];
+  }
+  update(dt){
+    this.t+=dt*this.speed;
+    if(this.t>=1){this.alive=false;return}
+    const x=this.from.x+(this.to.x-this.from.x)*this.t;
+    const y=this.from.y+(this.to.y-this.from.y)*this.t;
+    this.trail.push({x,y,a:1});
+    if(this.trail.length>12) this.trail.shift();
+    this.trail.forEach(p=>p.a*=.88);
+  }
+  draw(){
+    // trail
+    this.trail.forEach(p=>{
+      ctx.beginPath();ctx.arc(p.x,p.y,this.size*p.a,0,Math.PI*2);
+      ctx.fillStyle=this.color;ctx.globalAlpha=p.a*.4;ctx.fill();
+    });
+    // head
+    if(this.trail.length){
+      const h=this.trail[this.trail.length-1];
+      ctx.beginPath();ctx.arc(h.x,h.y,this.size,0,Math.PI*2);
+      ctx.fillStyle=this.color;ctx.globalAlpha=1;
+      ctx.shadowColor=this.color;ctx.shadowBlur=10;
+      ctx.fill();ctx.shadowBlur=0;
+    }
+    ctx.globalAlpha=1;
+  }
+}
+
+// ─── AMBIENT PARTICLES ────────────────────────────────────
+let ambientParticles=[];
+function initAmbient(){
+  ambientParticles=[];
+  for(let i=0;i<30;i++){
+    ambientParticles.push({
+      x:Math.random()*2000,y:Math.random()*2000,
+      vx:(Math.random()-.5)*.15,vy:(Math.random()-.5)*.15,
+      r:Math.random()*1.5+.5,a:Math.random()*.3+.05
+    });
+  }
+}
+function drawAmbient(){
+  ctx.save();
+  ambientParticles.forEach(p=>{
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(99,102,241,${p.a})`;ctx.fill();
+  });
+  ctx.restore();
+}
+
+// ─── GRID BACKGROUND ─────────────────────────────────────
+function drawGrid(){
+  ctx.save();ctx.strokeStyle='#1a2236';ctx.lineWidth=.5;
+  const s=40;
+  for(let x=0;x<W;x+=s){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<H;y+=s){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  ctx.restore();
+  drawAmbient();
+}
+
+// ─── ANIMATION LOOP ───────────────────────────────────────
+let lastT=0;
+function loop(ts){
+  const dt=Math.min((ts-lastT)/1000,.05);lastT=ts;time+=dt;
+  ctx.clearRect(0,0,W,H);
+  drawGrid();
+  // Draw task label if running
+  if(currentPreset&&running){
+    ctx.save();ctx.font='bold 12px sans-serif';ctx.textAlign='center';
+    ctx.fillStyle='rgba(99,102,241,.7)';
+    const taskText=currentPreset.task.length>70?currentPreset.task.slice(0,70)+'…':currentPreset.task;
+    ctx.fillText('🎯 '+taskText,W/2,24);
+    ctx.restore();
+  }
+  edges.forEach(e=>e.draw());
+  particles=particles.filter(p=>{p.update(dt);if(p.alive){p.draw();return true}return false});
+  nodes.forEach(n=>{n.update(dt);n.draw()});
+  animFrame=requestAnimationFrame(loop);
+}
+
+// ─── MOUSE HOVER ──────────────────────────────────────────
+C.addEventListener('mousemove',e=>{
+  const rect=C.getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  hoveredNode=null;
+  for(const n of nodes){
+    if(n.spawned&&n.opacity>.5&&n.hitTest(mx,my)){
+      hoveredNode=n;break;
+    }
+  }
+  C.style.cursor=hoveredNode?'pointer':'default';
+  if(hoveredNode&&currentPreset){
+    const ctx_data=currentPreset.context[hoveredNode.role];
+    if(ctx_data) showContext(hoveredNode.role,ctx_data,hoveredNode.color);
+  }
+});
+
+// ─── PANEL HELPERS ────────────────────────────────────────
+function clearPanels(){
+  ['contextPanel','skillsPanel','filesPanel','memoryPanel'].forEach(id=>{
+    document.getElementById(id).innerHTML='<span style="opacity:.5">Waiting…</span>';
+  });
+}
+
+function showContext(role,items,color){
+  const p=document.getElementById('contextPanel');
+  p.innerHTML=`<div style="font-weight:700;color:${color};font-size:.75rem;margin-bottom:4px">${role}'s Context Scope</div>`;
+  items.forEach(item=>{
+    p.innerHTML+=`<div class="context-item"><div class="context-label">scoped</div>${item}</div>`;
+  });
+}
+
+function addSkill(name,desc){
+  const p=document.getElementById('skillsPanel');
+  if(p.querySelector('span')) p.innerHTML='';
+  p.innerHTML+=`<div class="skill-card"><div class="skill-name">📄 ${name}</div><div class="skill-desc">${desc}</div></div>`;
+}
+
+function addFile(name){
+  const p=document.getElementById('filesPanel');
+  if(p.querySelector('span')) p.innerHTML='';
+  p.innerHTML+=`<div class="file-item"><span class="file-icon">📄</span><span class="file-name">${name}</span><span class="file-status">✓ created</span></div>`;
+}
+
+function addMemory(text){
+  const p=document.getElementById('memoryPanel');
+  if(p.querySelector('span')) p.innerHTML='';
+  p.innerHTML+=`<div class="memory-item"><div class="mem-label">learned</div>${text}</div>`;
+}
+
+// ─── LAYOUT AGENTS ────────────────────────────────────────
+function layoutNodes(preset){
+  const cx=W/2,cy=H/2;
+  const agents=preset.agents;
+  const n=agents.length;
+  nodes=[];edges=[];particles=[];
+  if(n===4){
+    const positions=[
+      {x:cx,y:cy-100},
+      {x:cx-130,y:cy+10},
+      {x:cx+130,y:cy+10},
+      {x:cx,y:cy+120}
+    ];
+    agents.forEach((a,i)=>{
+      nodes.push(new AgentNode(a.role,a.color,a.icon,positions[i].x,positions[i].y));
+    });
+  } else if(n===5){
+    const positions=[
+      {x:cx,y:cy-110},
+      {x:cx-140,y:cy-20},
+      {x:cx+140,y:cy-20},
+      {x:cx-80,y:cy+100},
+      {x:cx+80,y:cy+100}
+    ];
+    agents.forEach((a,i)=>{
+      nodes.push(new AgentNode(a.role,a.color,a.icon,positions[i].x,positions[i].y));
+    });
+  } else {
+    const radius=Math.min(W,H)*.3;
+    agents.forEach((a,i)=>{
+      const angle=-Math.PI/2+i*(Math.PI*2/n);
+      nodes.push(new AgentNode(a.role,a.color,a.icon,cx+Math.cos(angle)*radius,cy+Math.sin(angle)*radius));
+    });
+  }
+  // edges: connect planner to all others, and sequential pairs
+  for(let i=0;i<nodes.length-1;i++){
+    edges.push(new Edge(nodes[i],nodes[i+1],nodes[i].color));
+  }
+  // connect first (planner) to all for hub-spoke feel
+  for(let i=2;i<nodes.length;i++){
+    edges.push(new Edge(nodes[0],nodes[i],nodes[0].color));
+  }
+  // connect last to second-to-last verifier loop
+  if(nodes.length>3){
+    edges.push(new Edge(nodes[nodes.length-1],nodes[nodes.length-3],nodes[nodes.length-1].color));
+  }
+}
+
+// ─── ORCHESTRATION ENGINE ─────────────────────────────────
+let currentPreset=null;
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+function emitParticles(from,to,color,count=3){
+  for(let i=0;i<count;i++){
+    setTimeout(()=>{
+      particles.push(new Particle(from,to,color,.6+Math.random()*.4));
+    },i*150);
+  }
+}
+
+async function orchestrate(preset){
+  running=true;
+  currentPreset=preset;
+  document.getElementById('runBtn').disabled=true;
+  clearPanels();
+  document.getElementById('summary').classList.remove('visible');
+
+  layoutNodes(preset);
+
+  // Step 0: Plan
+  setStep(0);
+  nodes[0].spawn();nodes[0].activate();
+  showContext(nodes[0].role,preset.context[nodes[0].role],nodes[0].color);
+  await sleep(1200);
+
+  // Step 1: Decompose — show subtasks
+  setStep(1);
+  const cp=document.getElementById('contextPanel');
+  cp.innerHTML+=`<div style="margin-top:8px;font-weight:600;color:var(--text);font-size:.72rem">Subtasks:</div>`;
+  for(const st of preset.subtasks){
+    await sleep(400);
+    cp.innerHTML+=`<div class="context-item" style="border-color:var(--accent)"><div class="context-label" style="color:var(--accent)">subtask</div>${st}</div>`;
+  }
+  await sleep(800);
+
+  // Step 2: Load Skills
+  setStep(2);
+  nodes[0].deactivate();
+  for(const sk of preset.skills){
+    await sleep(600);
+    addSkill(sk.name,sk.desc);
+  }
+  await sleep(600);
+
+  // Step 3: Execute — spawn agents, send particles, produce files
+  setStep(3);
+  for(let i=1;i<nodes.length;i++){
+    await sleep(500);
+    nodes[i].spawn();
+    edges.forEach(e=>{if(e.from===nodes[i]||e.to===nodes[i]) e.show()});
+  }
+  await sleep(300);
+
+  // Activate agents sequentially, show context, emit particles, add files
+  const fileIdx=[0];
+  for(let i=1;i<nodes.length;i++){
+    const n=nodes[i];
+    n.activate();
+    if(preset.context[n.role]) showContext(n.role,preset.context[n.role],n.color);
+
+    // particles from previous
+    const prev=nodes[i-1];
+    edges.forEach(e=>{if((e.from===prev&&e.to===n)||(e.from===n&&e.to===prev)) e.active=true});
+    emitParticles(prev,n,n.color,4);
+    await sleep(300);
+
+    // add a file
+    if(fileIdx[0]<preset.files.length){
+      addFile(preset.files[fileIdx[0]++]);
+    }
+    await sleep(800);
+    if(i<nodes.length-1) n.deactivate();
+    edges.forEach(e=>e.active=false);
+  }
+
+  // remaining files
+  while(fileIdx[0]<preset.files.length){
+    await sleep(300);
+    addFile(preset.files[fileIdx[0]++]);
+  }
+  await sleep(400);
+
+  // Step 4: Verify
+  setStep(4);
+  const verifier=nodes[nodes.length-1];
+  verifier.activate();
+  showContext(verifier.role,preset.context[verifier.role],verifier.color);
+  emitParticles(nodes[nodes.length-2],verifier,verifier.color,5);
+  await sleep(1500);
+
+  if(preset.verifyFail){
+    // Fail — red pulse
+    verifier.color='#ef4444';
+    verifier.activate();
+    await sleep(800);
+
+    // Send back to an executor (node index 2 typically)
+    const fixer=nodes[Math.min(2,nodes.length-2)];
+    emitParticles(verifier,fixer,'#ef4444',5);
+    fixer.color='#f59e0b';fixer.activate();
+    addMemory('Verification failed — routing back to executor for fix');
+    await sleep(1200);
+
+    // Fix
+    addFile(preset.files[2]+' (fixed)');
+    fixer.deactivate();
+    await sleep(600);
+
+    // Re-verify
+    verifier.color='#22c55e';
+    emitParticles(fixer,verifier,'#22c55e',5);
+    verifier.activate();
+    await sleep(1200);
+  }
+
+  // Step 5: Complete
+  setStep(5);
+  verifier.color='#22c55e';verifier.activate();
+  nodes.forEach(n=>{n.color=n===verifier?'#22c55e':n.color;});
+
+  // Add all memory items
+  for(const m of preset.memory){
+    await sleep(400);
+    addMemory(m);
+  }
+
+  // Green pulse all
+  await sleep(600);
+  nodes.forEach(n=>{n.active=true;});
+  edges.forEach(e=>{e.active=true;e.color='#22c55e'});
+
+  // Show summary
+  await sleep(800);
+  const sumEl=document.getElementById('summary');
+  sumEl.innerHTML=`
+    <h2>✅ Task Complete</h2>
+    <p><strong>${preset.task.slice(0,60)}${preset.task.length>60?'…':''}</strong></p>
+    <p style="margin-top:8px">${nodes.length} agents collaborated across ${preset.files.length} files<br>
+    ${preset.skills.length} skills loaded on demand • ${preset.memory.length} patterns learned<br>
+    ${preset.verifyFail?'1 verification failure → auto-fixed':'All verifications passed first try'}</p>
+    <button class="btn btn-primary" onclick="resetAll()">Run Another ▶</button>
+  `;
+  sumEl.classList.add('visible');
+
+  running=false;
+  document.getElementById('runBtn').disabled=false;
+}
+
+// ─── INTERFACE ────────────────────────────────────────────
+function loadPreset(key){
+  if(running) return;
+  const p=PRESETS[key];
+  document.getElementById('taskInput').value=p.task;
+  startTask();
+}
+
+function startTask(){
+  if(running) return;
+  const input=document.getElementById('taskInput').value.trim();
+  if(!input) return;
+
+  // Match to nearest preset or default to 'api'
+  let preset;
+  const lower=input.toLowerCase();
+  if(lower.includes('debug')||lower.includes('crash')||lower.includes('error')||lower.includes('fix bug')) preset=PRESETS.debug;
+  else if(lower.includes('research')||lower.includes('study')||lower.includes('analyze')||lower.includes('investigate')) preset=PRESETS.research;
+  else preset=PRESETS.api;
+
+  // Override task text
+  preset={...preset,task:input};
+  orchestrate(preset);
+}
+
+function resetAll(){
+  document.getElementById('summary').classList.remove('visible');
+  nodes=[];edges=[];particles=[];currentPreset=null;
+  setStep(-1);clearPanels();
+  ['contextPanel','skillsPanel','filesPanel','memoryPanel'].forEach(id=>{
+    document.getElementById(id).innerHTML=document.getElementById(id).parentElement.querySelector('.panel-head .icon').textContent.includes('🔭')
+      ?'<span style="opacity:.5">Select an agent to view its context scope…</span>'
+      :'<span style="opacity:.5">Waiting…</span>';
+  });
+  document.getElementById('contextPanel').innerHTML='<span style="opacity:.5">Select an agent to view its context scope…</span>';
+  document.getElementById('skillsPanel').innerHTML='<span style="opacity:.5">Skills load on demand…</span>';
+  document.getElementById('filesPanel').innerHTML='<span style="opacity:.5">Files appear as agents produce output…</span>';
+  document.getElementById('memoryPanel').innerHTML='<span style="opacity:.5">Learnings accumulate here…</span>';
+}
+
+// Enter key
+document.getElementById('taskInput').addEventListener('keydown',e=>{if(e.key==='Enter') startTask()});
+
+// ─── INIT ─────────────────────────────────────────────────
+buildTimeline();
+buildLegend();
+resize();
+initAmbient();
+lastT=performance.now();
+animFrame=requestAnimationFrame(loop);
+</script>
+</body>
+</html>
